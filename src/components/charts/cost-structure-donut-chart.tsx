@@ -55,7 +55,7 @@ export function CostStructureDonutChart({ title, rows }: Props) {
               innerRadius={70}
               outerRadius={110}
               paddingAngle={2}
-              label={(entry) => formatPercent(entry.ratio)}
+              label={(entry) => formatPercent(Number(entry.percent ?? 0))}
             >
               {rows.map((_, index) => (
                 <Cell
