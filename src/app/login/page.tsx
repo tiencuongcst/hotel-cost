@@ -11,37 +11,41 @@ export default function LoginPage() {
   const [errorMessage, setErrorMessage] = useState('');
   const [loading, setLoading] = useState(false);
 
-  async function handleLogin() {
-    try {
-      setLoading(true);
-      setErrorMessage('');
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+  event.preventDefault();
 
-      const response = await fetch('/api/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          password,
-        }),
-      });
+  try {
+    setIsLoading(true);
+    setError(null);
 
-      const result = await response.json();
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        username,
+        password,
+      }),
+    });
 
-      if (!response.ok) {
-        setErrorMessage(result.message || 'Login failed');
-        return;
-      }
+    const result = await response.json();
 
-      router.push('/dashboard/overview');
-      router.refresh();
-    } catch (error) {
-      setErrorMessage('Login failed');
-    } finally {
-      setLoading(false);
+    if (!response.ok) {
+      throw new Error(result.message || "Login failed");
     }
+
+    router.replace("/dashboard/overview");
+    router.refresh();
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Login failed";
+
+    setError(message);
+  } finally {
+    setIsLoading(false);
   }
+}
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-100">
