@@ -1,57 +1,47 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase/client';
+import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: Request) {
+const AUTH_COOKIE_NAME = "hotel_cost_user";
+
+export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const userId = String(body.user_id || '').trim();
-    const password = String(body.password || '').trim();
+    const username = String(body.username ?? "").trim();
+    const password = String(body.password ?? "").trim();
 
-    if (!userId || !password) {
+    if (!username || !password) {
       return NextResponse.json(
-        { message: 'Thiếu user hoặc password' },
+        { message: "Thiếu user hoặc password" },
         { status: 400 }
       );
     }
 
-    const { data, error } = await supabase.rpc('rpc_login_user', {
-      p_user_id: userId,
-      p_password: password,
-    });
-
-    if (error) {
+    if (username !== "admin" || password !== "admin123") {
       return NextResponse.json(
-        { message: error.message },
-        { status: 500 }
-      );
-    }
-
-    const user = data?.[0];
-
-    if (!user) {
-      return NextResponse.json(
-        { message: 'User hoặc password không đúng' },
+        { message: "Sai user hoặc password" },
         { status: 401 }
       );
     }
 
     const response = NextResponse.json({
-      user_id: user.user_id,
-      user_name: user.user_name,
+      success: true,
+      message: "Login success",
     });
 
-    response.cookies.set('hotel_cost_user', user.user_id, {
+    response.cookies.set(AUTH_COOKIE_NAME, username, {
       httpOnly: true,
-      sameSite: 'lax',
-      path: '/',
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
       maxAge: 60 * 60 * 24,
     });
 
     return response;
   } catch (error) {
+    console.error("Login API error:", error);
+
     return NextResponse.json(
-      { message: 'Login failed' },
+      { message: "Login server error" },
       { status: 500 }
     );
   }
