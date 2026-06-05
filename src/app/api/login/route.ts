@@ -1,16 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 
+export const runtime = "nodejs";
+
 const AUTH_COOKIE_NAME = "hotel_cost_user";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables");
+if (!supabaseUrl || !serviceRoleKey) {
+  throw new Error("Missing Supabase server environment variables");
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+const supabase = createClient(supabaseUrl, serviceRoleKey, {
+  auth: {
+    persistSession: false,
+  },
+});
 
 export async function POST(request: NextRequest) {
   try {
@@ -35,7 +41,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("Login query error:", error);
+      console.error("LOGIN SUPABASE ERROR:", error);
 
       return NextResponse.json(
         { message: "Không kiểm tra được tài khoản" },
@@ -43,14 +49,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!user) {
-      return NextResponse.json(
-        { message: "Sai user hoặc password" },
-        { status: 401 }
-      );
-    }
-
-    if (user.password !== password) {
+    if (!user || user.password !== password) {
       return NextResponse.json(
         { message: "Sai user hoặc password" },
         { status: 401 }
@@ -75,7 +74,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Login API error:", error);
+    console.error("LOGIN API ERROR:", error);
 
     return NextResponse.json(
       { message: "Login server error" },
