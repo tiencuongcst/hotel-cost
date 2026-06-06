@@ -5,21 +5,23 @@ export const runtime = "nodejs";
 
 const AUTH_COOKIE_NAME = "hotel_cost_user";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !serviceRoleKey) {
-  throw new Error("Missing Supabase server environment variables");
-}
-
-const supabase = createClient(supabaseUrl, serviceRoleKey, {
-  auth: {
-    persistSession: false,
-  },
-});
-
 export async function POST(request: NextRequest) {
   try {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceRoleKey) {
+      return NextResponse.json(
+        {
+          message: "Thiếu ENV Supabase",
+          hasSupabaseUrl: Boolean(supabaseUrl),
+          hasServiceRoleKey: Boolean(serviceRoleKey),
+          supabaseUrl,
+        },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
 
     const userId = String(body.username ?? "").trim();
@@ -32,6 +34,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+      },
+    });
+
     const { data: user, error } = await supabase
       .from("data_users")
       .select("user_id, user_name, password, status")
@@ -41,17 +50,33 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
-      console.error("LOGIN SUPABASE ERROR:", error);
+  console.error("LOGIN SUPABASE ERROR:", error);
 
+  return NextResponse.json(
+    {
+      message: error.message,
+      code: error.code,
+      details: error.details,
+      hint: error.hint,
+    },
+    { status: 500 }
+  );
+}
+
+    if (!user) {
       return NextResponse.json(
-        { message: "Không kiểm tra được tài khoản" },
-        { status: 500 }
+        { message: "Không tìm thấy user active" },
+        { status: 401 }
       );
     }
 
-    if (!user || user.password !== password) {
+    if (user.password !== password) {
       return NextResponse.json(
-        { message: "Sai user hoặc password" },
+        {
+          message: "Sai user hoặc password",
+          inputPasswordLength: password.length,
+          dbPasswordLength: String(user.password).length,
+        },
         { status: 401 }
       );
     }
@@ -74,10 +99,14 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Login server error";
+
     console.error("LOGIN API ERROR:", error);
 
     return NextResponse.json(
-      { message: "Login server error" },
+      {
+        message,
+      },
       { status: 500 }
     );
   }

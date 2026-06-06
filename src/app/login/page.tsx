@@ -32,7 +32,11 @@ export default function LoginPage() {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || "Login failed");
+        throw new Error(
+  result.supabaseError ||
+    result.message ||
+    JSON.stringify(result, null, 2)
+);
       }
 
       router.replace("/dashboard/overview");
